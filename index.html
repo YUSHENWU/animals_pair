@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="動物翻翻牌 — A–Z 26 種動物共 52 張牌，支援 1–4 人與電腦對戰、深淺色切換、置頂回合提示列與手機大圖最佳化體驗。" />
+  <title>動物翻翻牌 | A–Z Animals Pair</title>
+  <style>
+    :root {
+      --bg: #FAF6F0;
+      --bg-elevated: #FFFFFF;
+      --bg-sticky: rgba(250, 246, 240, 0.92);
+      --surface-muted: #F1EAE0;
+      --border: #E4DACB;
+      --text: #1F2933;
+      --text-muted: #5F6C7B;
+      --accent: #2E6F5E;
+      --accent-hover: #23584A;
+      --accent-soft: rgba(46, 111, 94, 0.12);
+      --card-back-1: #2E6F5E;
+      --card-back-2: #24594B;
+      --card-back-border: rgba(255, 255, 255, 0.22);
+      --card-face: #FFFFFF;
+      --card-shadow: 0 4px 12px rgba(31, 41, 51, 0.08);
+      --card-shadow-hover: 0 8px 20px rgba(31, 41, 51, 0.14);
+      --modal-backdrop: rgba(15, 23, 42, 0.55);
+      --p1: #2563EB;
+      --p2: #D97706;
+      --p3: #059669;
+      --p4: #E11D48;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #12161B;
+      --bg-elevated: #1C222A;
+      --bg-sticky: rgba(18, 22, 27, 0.92);
+      --surface-muted: #242C36;
+      --border: #303B48;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --accent: #34D399;
+      --accent-hover: #10B981;
+      --accent-soft: rgba(52, 211, 153, 0.14);
+      --card-back-1: #1F4E45;
+      --card-back-2: #173B34;
+      --card-back-border: rgba(255, 255, 255, 0.14);
+      --card-face: #212832;
+      --card-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      --card-shadow-hover: 0 8px 22px rgba(0, 0, 0, 0.5);
+      --modal-backdrop: rgba(0, 0, 0, 0.72);
+      --p1: #60A5FA;
+      --p2: #FBBF24;
+      --p3: #34D399;
+      --p4: #FB7185;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.4;
+      transition: background-color 0.25s ease, color 0.25s ease;
+      min-height: 100dvh;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    /* Sticky Top Turn-Indicator Bar */
+    .sticky-top-bar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--bg-sticky);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      padding-top: max(8px, env(safe-area-inset-top));
+    }
+
+    .top-bar-inner {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .turn-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .turn-indicator-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      border: 2px solid var(--turn-color, var(--accent));
+      font-weight: 700;
+      font-size: 0.95rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .turn-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--turn-color, var(--accent));
+      flex-shrink: 0;
+    }
+
+    .turn-dot.thinking {
+      animation: pulse-dot 1s infinite ease-in-out;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.45); opacity: 0.55; }
+    }
+
+    .stats-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--surface-muted);
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.94);
+    }
+
+    /* Scoreboard Strip inside Sticky Bar */
+    .scoreboard-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .player-chip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: var(--bg-elevated);
+      border: 1.5px solid var(--border);
+      font-size: 0.82rem;
+      transition: all 0.2s ease;
+      min-width: 0;
+    }
+
+    .player-chip.active {
+      border-color: var(--player-color);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--player-color) 22%, transparent);
+      transform: translateY(-1px);
+    }
+
+    .player-chip-name {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .player-badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--player-color);
+      flex-shrink: 0;
+    }
+
+    .player-chip-score {
+      font-weight: 800;
+      color: var(--player-color);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Main Container */
+    .main-container {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 12px 10px 32px;
+    }
+
+    .title-bar {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 2px 2px 10px;
+      flex-wrap: wrap;
+    }
+
+    .title-bar h1 {
+      margin: 0;
+      font-size: clamp(1.15rem, 3.8vw, 1.5rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .title-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Responsive 52-Card Grid - Big Animals on Mobile! */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    @media (min-width: 520px) {
+      .card-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .main-container {
+        padding: 16px 18px 40px;
+      }
+      .card-grid {
+        grid-template-columns: repeat(7, 1fr);
+        gap: 12px;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .card-grid {
+        grid-template-columns: repeat(8, 1fr);
+        gap: 12px;
+      }
+    }
+
+    @media (min-width: 1280px) {
+      .card-grid {
+        grid-template-columns: repeat(13, 1fr);
+        gap: 10px;
+      }
+    }
+
+    /* Card 3D Flip */
+    .card {
+      position: relative;
+      aspect-ratio: 3 / 3.9;
+      perspective: 900px;
+      background: transparent;
+      border: none;
+      padding: 0;
+      width: 100%;
+      user-select: none;
+    }
+
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+      border-radius: var(--radius-md);
+    }
+
+    .card.flipped .card-inner,
+    .card.matched .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Card Back */
+    .card-back {
+      background: linear-gradient(145deg, var(--card-back-1), var(--card-back-2));
+      border: 2px solid var(--card-back-border);
+      box-shadow: var(--card-shadow);
+    }
+
+    .card-back::before {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border-radius: calc(var(--radius-md) - 4px);
+      border: 1.5px dashed rgba(255, 255, 255, 0.28);
+      pointer-events: none;
+    }
+
+    .card-back-icon {
+      font-size: clamp(1.4rem, 5vw, 2rem);
+      opacity: 0.85;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+
+    .card:not(.flipped):not(.matched):hover .card-back {
+      box-shadow: var(--card-shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .card:not(.flipped):not(.matched):active .card-inner {
+      transform: scale(0.95);
+    }
+
+    /* Card Front - Large Animal Focus */
+    .card-front {
+      transform: rotateY(180deg);
+      background: var(--card-face);
+      border: 2px solid var(--border);
+      box-shadow: var(--card-shadow);
+      padding: 5px 4px 6px;
+      justify-content: space-between;
+    }
+
+    .card.matched .card-front {
+      border-color: var(--matched-color, var(--accent));
+      background: color-mix(in srgb, var(--matched-color, var(--accent)) 8%, var(--card-face));
+    }
+
+    .card.just-matched .card-inner {
+      animation: match-pop 0.45s ease;
+    }
+
+    @keyframes match-pop {
+      0% { transform: rotateY(180deg) scale(1); }
+      45% { transform: rotateY(180deg) scale(1.08); }
+      100% { transform: rotateY(180deg) scale(1); }
+    }
+
+    .card-top-row {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2px;
+    }
+
+    .letter-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 5px;
+      border-radius: 7px;
+      background: var(--surface-muted);
+      color: var(--text);
+      font-weight: 800;
+      font-size: clamp(0.72rem, 2.5vw, 0.85rem);
+      letter-spacing: 0.02em;
+    }
+
+    .matched-owner-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--matched-color, var(--accent));
+      display: none;
+    }
+
+    .card.matched .matched-owner-dot {
+      display: block;
+    }
+
+    /* Big Animal Visual */
+    .animal-stage {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .animal-halo {
+      position: absolute;
+      width: 78%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--accent-soft);
+      pointer-events: none;
+    }
+
+    .animal-emoji {
+      position: relative;
+      font-size: clamp(2.6rem, 11.5vw, 3.8rem);
+      line-height: 1;
+      filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.12));
+      user-select: none;
+    }
+
+    @media (min-width: 768px) {
+      .animal-emoji {
+        font-size: clamp(2.8rem, 4.5vw, 3.6rem);
+      }
+    }
+
+    @media (min-width: 1280px) {
+      .animal-emoji {
+        font-size: 3rem;
+      }
+    }
+
+    .animal-label {
+      width: 100%;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .animal-zh {
+      font-size: clamp(0.72rem, 2.8vw, 0.88rem);
+      font-weight: 800;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .animal-en {
+      font-size: clamp(0.58rem, 2vw, 0.68rem);
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Match Toast Banner */
+    .toast-banner {
+      position: fixed;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(90px);
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1.5px solid var(--accent);
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+      z-index: 150;
+      opacity: 0;
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .toast-banner.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--modal-backdrop);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 460px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      max-height: 90dvh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 800;
+    }
+
+    .section-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin: 14px 0 8px;
+    }
+
+    .mode-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .mode-btn {
+      padding: 11px 10px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border);
+      background: var(--surface-muted);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .mode-btn.selected {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .player-slots {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slot-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+    }
+
+    .slot-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .slot-toggle {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-elevated);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 0.82rem;
+    }
+
+    .ai-diff-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .primary-btn {
+      width: 100%;
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: var(--accent);
+      color: #FFFFFF;
+      font-size: 1.02rem;
+      font-weight: 800;
+      transition: background-color 0.15s ease, transform 0.12s ease;
+    }
+
+    [data-theme="dark"] .primary-btn {
+      color: #0B1914;
+    }
+
+    .primary-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .primary-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Result Ranking */
+    .result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .result-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-muted);
+      border: 1.5px solid var(--border);
+      font-weight: 700;
+    }
+
+    .result-item.winner {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .result-summary {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sticky Top Turn-Indicator Bar -->
+  <header class="sticky-top-bar" aria-label="遊戲回合與計分列">
+    <div class="top-bar-inner">
+      <div class="top-row">
+        <div class="turn-banner">
+          <div class="turn-indicator-pill" id="turnPill">
+            <span class="turn-dot" id="turnDot"></span>
+            <span id="turnText">玩家 1 的回合</span>
+          </div>
+          <div class="stats-pill" id="remainingPill">剩 26 對</div>
+        </div>
+        <div class="top-actions">
+          <button class="icon-btn" id="soundBtn" type="button" aria-label="切換音效" title="切換音效">🔊</button>
+          <button class="icon-btn" id="themeBtn" type="button" aria-label="切換深淺色" title="切換深淺色">🌙</button>
+          <button class="icon-btn" id="setupBtn" type="button" aria-label="遊戲設定與新局" title="遊戲設定與新局">⚙️</button>
+        </div>
+      </div>
+      <div class="scoreboard-strip" id="scoreboardStrip"></div>
+    </div>
+  </header>
+
+  <!-- Main Game Board -->
+  <main class="main-container">
+    <div class="title-bar">
+      <h1>🐾 動物翻翻牌 A–Z</h1>
+      <span class="title-subtitle" id="gameMetaText">26 種動物 · 52 張牌</span>
+    </div>
+    <section class="card-grid" id="cardGrid" aria-label="動物翻翻牌遊戲區"></section>
+  </main>
+
+  <!-- Toast Banner -->
+  <div class="toast-banner" id="toastBanner" role="status" aria-live="polite"></div>
+
+  <!-- Setup Modal -->
+  <div class="modal-overlay" id="setupModal" role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title" id="setupTitle">🎮 新局設定</h2>
+        <button class="icon-btn" id="closeSetupBtn" type="button" aria-label="關閉設定">✕</button>
+      </div>
+
+      <span class="section-label">選擇對戰人數與模式</span>
+      <div class="mode-grid" id="modeGrid">
+        <button class="mode-btn" data-mode="solo" type="button">🧑 單人挑戰</button>
+        <button class="mode-btn selected" data-mode="vs-ai" type="button">🤖 人機對戰</button>
+        <button class="mode-btn" data-mode="2p" type="button">👥 2 人對戰</button>
+        <button class="mode-btn" data-mode="3p" type="button">👨‍👩‍👦 3 人對戰</button>
+        <button class="mode-btn" data-mode="4p" type="button" style="grid-column: span 2;">🎉 4 人大亂鬥</button>
+      </div>
+
+      <span class="section-label">玩家陣容（點擊可切換人類 / 電腦）</span>
+      <div class="player-slots" id="playerSlots"></div>
+
+      <div id="aiDifficultyWrap">
+        <span class="section-label">電腦記憶力難度</span>
+        <div class="ai-diff-row" id="aiDiffRow">
+          <button class="mode-btn" data-diff="easy" type="button">🌱 簡單</button>
+          <button class="mode-btn selected" data-diff="normal" type="button">⚡ 普通</button>
+          <button class="mode-btn" data-diff="hard" type="button">🧠 聰明</button>
+        </div>
+      </div>
+
+      <button class="primary-btn" id="startGameBtn" type="button">開始新局（52 張牌）</button>
+    </div>
+  </div>
+
+  <!-- Victory Modal -->
+  <div class="modal-overlay" id="victoryModal" role="dialog" aria-modal="true" aria-labelledby="victoryTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title" id="victoryTitle">🏆 遊戲結束！</h2>
+        <button class="icon-btn" id="closeVictoryBtn" type="button" aria-label="關閉">✕</button>
+      </div>
+      <div id="victoryHeadline" style="font-size:1.1rem; font-weight:800; text-align:center;"></div>
+      <div class="result-list" id="resultList"></div>
+      <div class="result-summary" id="resultSummary"></div>
+      <button class="primary-btn" id="playAgainBtn" type="button">再玩一局 🔄</button>
+    </div>
+  </div>
+
+  <script>
+    // 26 English Letters A-Z -> 26 Distinct Animals (52 cards total)
+    const ANIMALS = [
+      { letter: 'A', en: 'Alligator', zh: '鱷魚', emoji: '🐊' },
+      { letter: 'B', en: 'Bear', zh: '棕熊', emoji: '🐻' },
+      { letter: 'C', en: 'Cat', zh: '貓咪', emoji: '🐱' },
+      { letter: 'D', en: 'Dog', zh: '狗狗', emoji: '🐶' },
+      { letter: 'E', en: 'Elephant', zh: '大象', emoji: '🐘' },
+      { letter: 'F', en: 'Fox', zh: '狐狸', emoji: '🦊' },
+      { letter: 'G', en: 'Giraffe', zh: '長頸鹿', emoji: '🦒' },
+      { letter: 'H', en: 'Hippo', zh: '河馬', emoji: '🦛' },
+      { letter: 'I', en: 'Iguana', zh: '鬣蜥', emoji: '🦎' },
+      { letter: 'J', en: 'Jaguar', zh: '美洲豹', emoji: '🐆' },
+      { letter: 'K', en: 'Koala', zh: '無尾熊', emoji: '🐨' },
+      { letter: 'L', en: 'Lion', zh: '獅子', emoji: '🦁' },
+      { letter: 'M', en: 'Monkey', zh: '猴子', emoji: '🐵' },
+      { letter: 'N', en: 'Nightingale', zh: '夜鶯', emoji: '🐦' },
+      { letter: 'O', en: 'Owl', zh: '貓頭鷹', emoji: '🦉' },
+      { letter: 'P', en: 'Penguin', zh: '企鵝', emoji: '🐧' },
+      { letter: 'Q', en: 'Quail', zh: '鵪鶉', emoji: '🐥' },
+      { letter: 'R', en: 'Rabbit', zh: '兔子', emoji: '🐰' },
+      { letter: 'S', en: 'Sheep', zh: '綿羊', emoji: '🐑' },
+      { letter: 'T', en: 'Tiger', zh: '老虎', emoji: '🐯' },
+      { letter: 'U', en: 'Unicorn', zh: '獨角獸', emoji: '🦄' },
+      { letter: 'V', en: 'Viper', zh: '蝰蛇', emoji: '🐍' },
+      { letter: 'W', en: 'Wolf', zh: '野狼', emoji: '🐺' },
+      { letter: 'X', en: 'X-ray Fish', zh: '透明魚', emoji: '🐟' },
+      { letter: 'Y', en: 'Yak', zh: '氂牛', emoji: '🐂' },
+      { letter: 'Z', en: 'Zebra', zh: '斑馬', emoji: '🦓' }
+    ];
+
+    const PLAYER_COLORS = ['var(--p1)', 'var(--p2)', 'var(--p3)', 'var(--p4)'];
+
+    // Web Audio API Sound Effects
+    class SoundFX {
+      constructor() {
+        this.enabled = true;
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playTone(freq, duration, type = 'sine', gainVal = 0.08, delay = 0) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime + delay;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(gainVal, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration);
+      }
+      flip() { this.playTone(420, 0.08, 'triangle', 0.07); }
+      match() {
+        this.playTone(523.25, 0.14, 'sine', 0.09, 0);
+        this.playTone(659.25, 0.18, 'sine', 0.09, 0.08);
+      }
+      miss() { this.playTone(210, 0.14, 'sine', 0.06); }
+      win() {
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+          this.playTone(f, 0.22, 'triangle', 0.09, i * 0.1);
+        });
+      }
+    }
+
+    const sfx = new SoundFX();
+
+    // Game State
+    const state = {
+      deck: [],
+      flippedIndices: [],
+      matchedCount: 0,
+      moves: 0,
+      startTime: null,
+      isLocked: false,
+      currentPlayerIndex: 0,
+      players: [
+        { name: '玩家 1', isAI: false, score: 0, color: PLAYER_COLORS[0] },
+        { name: '電腦', isAI: true, score: 0, color: PLAYER_COLORS[1] }
+      ],
+      aiDifficulty: 'normal',
+      aiMemory: new Map(), // cardIndex -> letter
+      selectedMode: 'vs-ai',
+      setupSlots: [
+        { isAI: false },
+        { isAI: true }
+      ],
+      aiTimers: []
+    };
+
+    // DOM Elements
+    const cardGrid = document.getElementById('cardGrid');
+    const scoreboardStrip = document.getElementById('scoreboardStrip');
+    const turnPill = document.getElementById('turnPill');
+    const turnDot = document.getElementById('turnDot');
+    const turnText = document.getElementById('turnText');
+    const remainingPill = document.getElementById('remainingPill');
+    const gameMetaText = document.getElementById('gameMetaText');
+    const toastBanner = document.getElementById('toastBanner');
+    const themeBtn = document.getElementById('themeBtn');
+    const soundBtn = document.getElementById('soundBtn');
+    const setupBtn = document.getElementById('setupBtn');
+    const setupModal = document.getElementById('setupModal');
+    const closeSetupBtn = document.getElementById('closeSetupBtn');
+    const modeGrid = document.getElementById('modeGrid');
+    const playerSlotsEl = document.getElementById('playerSlots');
+    const aiDifficultyWrap = document.getElementById('aiDifficultyWrap');
+    const aiDiffRow = document.getElementById('aiDiffRow');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const victoryModal = document.getElementById('victoryModal');
+    const closeVictoryBtn = document.getElementById('closeVictoryBtn');
+    const victoryHeadline = document.getElementById('victoryHeadline');
+    const resultList = document.getElementById('resultList');
+    const resultSummary = document.getElementById('resultSummary');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+
+    // Theme Management
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+      localStorage.setItem('animals_pair_theme', theme);
+    }
+
+    const savedTheme = localStorage.getItem('animals_pair_theme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    applyTheme(savedTheme);
+
+    themeBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+
+    soundBtn.addEventListener('click', () => {
+      sfx.enabled = !sfx.enabled;
+      soundBtn.textContent = sfx.enabled ? '🔊' : '🔇';
+    });
+
+    // Toast Helper
+    let toastTimer = null;
+    function showToast(msg) {
+      toastBanner.textContent = msg;
+      toastBanner.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastBanner.classList.remove('show'), 1900);
+    }
+
+    // Fisher-Yates Shuffle
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // Clear AI timers
+    function clearAITimers() {
+      state.aiTimers.forEach(t => clearTimeout(t));
+      state.aiTimers = [];
+    }
+
+    // Start New Game
+    function startNewGame() {
+      clearAITimers();
+      const rawDeck = [...ANIMALS, ...ANIMALS].map((animal, idx) => ({
+        ...animal,
+        uid: idx,
+        matched: false,
+        ownerIndex: null
+      }));
+
+      state.deck = shuffle(rawDeck);
+      state.flippedIndices = [];
+      state.matchedCount = 0;
+      state.moves = 0;
+      state.startTime = Date.now();
+      state.isLocked = false;
+      state.currentPlayerIndex = 0;
+      state.aiMemory.clear();
+
+      // Build active players from setupSlots
+      let humanNum = 1;
+      let aiNum = 1;
+      const totalAI = state.setupSlots.filter(s => s.isAI).length;
+      state.players = state.setupSlots.map((slot, idx) => {
+        let name;
+        if (slot.isAI) {
+          name = totalAI > 1 ? `電腦 ${aiNum++}` : '電腦';
+        } else {
+          name = state.setupSlots.length === 1 ? '玩家 1' : `玩家 ${humanNum++}`;
+        }
+        return {
+          name,
+          isAI: slot.isAI,
+          score: 0,
+          color: PLAYER_COLORS[idx]
+        };
+      });
+
+      renderBoard();
+      renderTopBar();
+      setupModal.classList.remove('open');
+      victoryModal.classList.remove('open');
+
+      if (state.players[0].isAI) {
+        scheduleAITurn();
+      }
+    }
+
+    // Render 52 Cards
+    function renderBoard() {
+      cardGrid.innerHTML = '';
+      const fragment = document.createDocumentFragment();
+
+      state.deck.forEach((card, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'card';
+        btn.dataset.index = index;
+        btn.setAttribute('aria-label', `第 ${index + 1} 張牌`);
+
+        btn.innerHTML = `
+          <div class="card-inner">
+            <div class="card-face card-back">
+              <span class="card-back-icon">🐾</span>
+            </div>
+            <div class="card-face card-front">
+              <div class="card-top-row">
+                <span class="letter-badge">${card.letter}</span>
+                <span class="matched-owner-dot"></span>
+              </div>
+              <div class="animal-stage">
+                <span class="animal-halo"></span>
+                <span class="animal-emoji" aria-hidden="true">${card.emoji}</span>
+              </div>
+              <div class="animal-label">
+                <span class="animal-zh">${card.zh}</span>
+                <span class="animal-en">${card.en}</span>
+              </div>
+            </div>
+          </div>
+        `;
+
+        btn.addEventListener('click', () => handleHumanCardClick(index));
+        fragment.appendChild(btn);
+      });
+
+      cardGrid.appendChild(fragment);
+    }
+
+    // Render Sticky Top Bar
+    function renderTopBar() {
+      const current = state.players[state.currentPlayerIndex];
+      turnPill.style.setProperty('--turn-color', current.color);
+      turnDot.classList.toggle('thinking', current.isAI);
+      turnText.textContent = current.isAI
+        ? `🤖 ${current.name}思考中…`
+        : `輪到 ${current.name}`;
+
+      const remainingPairs = 26 - state.matchedCount;
+      remainingPill.textContent = `剩 ${remainingPairs} 對`;
+      gameMetaText.textContent = `26 種動物 · 52 張牌 · 已翻 ${state.moves} 回合`;
+
+      scoreboardStrip.innerHTML = '';
+      state.players.forEach((p, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'player-chip' + (idx === state.currentPlayerIndex ? ' active' : '');
+        chip.style.setProperty('--player-color', p.color);
+        chip.innerHTML = `
+          <span class="player-chip-name">
+            <span class="player-badge-dot"></span>
+            <span>${p.isAI ? '🤖 ' : ''}${p.name}</span>
+          </span>
+          <span class="player-chip-score">${p.score} 對</span>
+        `;
+        scoreboardStrip.appendChild(chip);
+      });
+    }
+
+    // Handle Human Click
+    function handleHumanCardClick(index) {
+      const current = state.players[state.currentPlayerIndex];
+      if (current.isAI || state.isLocked) return;
+      flipCard(index);
+    }
+
+    // Flip Card Core Logic
+    function flipCard(index) {
+      const card = state.deck[index];
+      if (!card || card.matched || state.flippedIndices.includes(index)) return;
+
+      const cardEl = cardGrid.children[index];
+      cardEl.classList.add('flipped');
+      cardEl.setAttribute('aria-label', `${card.letter} ${card.zh} ${card.en}`);
+      sfx.flip();
+
+      // Record in AI memory
+      state.aiMemory.set(index, card.letter);
+      state.flippedIndices.push(index);
+
+      if (state.flippedIndices.length === 2) {
+        state.isLocked = true;
+        state.moves += 1;
+        checkMatch();
+      }
+    }
+
+    function checkMatch() {
+      const [idx1, idx2] = state.flippedIndices;
+      const card1 = state.deck[idx1];
+      const card2 = state.deck[idx2];
+      const current = state.players[state.currentPlayerIndex];
+
+      if (card1.letter === card2.letter) {
+        // Match!
+        card1.matched = true;
+        card2.matched = true;
+        card1.ownerIndex = state.currentPlayerIndex;
+        card2.ownerIndex = state.currentPlayerIndex;
+        current.score += 1;
+        state.matchedCount += 1;
+
+        state.aiMemory.delete(idx1);
+        state.aiMemory.delete(idx2);
+
+        const el1 = cardGrid.children[idx1];
+        const el2 = cardGrid.children[idx2];
+        [el1, el2].forEach(el => {
+          el.classList.add('matched', 'just-matched');
+          el.style.setProperty('--matched-color', current.color);
+        });
+
+        sfx.match();
+        showToast(`${current.name} 配對成功！${card1.emoji} ${card1.letter} · ${card1.zh}`);
+        state.flippedIndices = [];
+        renderTopBar();
+
+        if (state.matchedCount === ANIMALS.length) {
+          setTimeout(showVictory, 650);
+          return;
+        }
+
+        // Same player continues on match
+        setTimeout(() => {
+          state.isLocked = false;
+          if (state.players[state.currentPlayerIndex].isAI) {
+            scheduleAITurn();
+          }
+        }, 550);
+      } else {
+        // Mismatch
+        sfx.miss();
+        setTimeout(() => {
+          cardGrid.children[idx1].classList.remove('flipped');
+          cardGrid.children[idx2].classList.remove('flipped');
+          cardGrid.children[idx1].setAttribute('aria-label', `第 ${idx1 + 1} 張牌`);
+          cardGrid.children[idx2].setAttribute('aria-label', `第 ${idx2 + 1} 張牌`);
+          state.flippedIndices = [];
+          state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.players.length;
+          state.isLocked = false;
+          renderTopBar();
+
+          if (state.players[state.currentPlayerIndex].isAI) {
+            scheduleAITurn();
+          }
+        }, 900);
+      }
+    }
+
+    // Computer AI Logic
+    function getAvailableIndices() {
+      const list = [];
+      state.deck.forEach((c, i) => {
+        if (!c.matched && !state.flippedIndices.includes(i)) list.push(i);
+      });
+      return list;
+    }
+
+    function getMemoryAccuracy() {
+      if (state.aiDifficulty === 'easy') return 0.3;
+      if (state.aiDifficulty === 'hard') return 0.95;
+      return 0.72;
+    }
+
+    function pickAICards() {
+      const available = getAvailableIndices();
+      const useMemory = Math.random() < getMemoryAccuracy();
+
+      if (useMemory) {
+        // Check if AI knows any complete pair
+        const byLetter = new Map();
+        for (const [idx, letter] of state.aiMemory.entries()) {
+          if (!state.deck[idx].matched) {
+            if (!byLetter.has(letter)) byLetter.set(letter, []);
+            byLetter.get(letter).push(idx);
+          }
+        }
+        for (const indices of byLetter.values()) {
+          if (indices.length >= 2) {
+            return [indices[0], indices[1]];
+          }
+        }
+      }
+
+      // Otherwise pick an unknown card first (if available)
+      const unknown = available.filter(i => !state.aiMemory.has(i));
+      const pool1 = unknown.length > 0 ? unknown : available;
+      const first = pool1[Math.floor(Math.random() * pool1.length)];
+      const firstLetter = state.deck[first].letter;
+
+      // Check if partner is already in memory
+      if (useMemory) {
+        for (const [idx, letter] of state.aiMemory.entries()) {
+          if (idx !== first && letter === firstLetter && !state.deck[idx].matched) {
+            return [first, idx];
+          }
+        }
+      }
+
+      const pool2 = available.filter(i => i !== first);
+      const second = pool2[Math.floor(Math.random() * pool2.length)];
+      return [first, second];
+    }
+
+    function scheduleAITurn() {
+      clearAITimers();
+      const [first, second] = pickAICards();
+      const t1 = setTimeout(() => {
+        flipCard(first);
+        const t2 = setTimeout(() => {
+          flipCard(second);
+        }, 650);
+        state.aiTimers.push(t2);
+      }, 520);
+      state.aiTimers.push(t1);
+    }
+
+    // Victory Modal
+    function showVictory() {
+      sfx.win();
+      const elapsedSec = Math.max(1, Math.round((Date.now() - state.startTime) / 1000));
+      const mins = Math.floor(elapsedSec / 60);
+      const secs = elapsedSec % 60;
+      const timeStr = mins > 0 ? `${mins} 分 ${secs} 秒` : `${secs} 秒`;
+
+      const sorted = [...state.players].sort((a, b) => b.score - a.score);
+      const topScore = sorted[0].score;
+      const winners = sorted.filter(p => p.score === topScore);
+
+      if (state.players.length === 1) {
+        victoryHeadline.textContent = `🎉 恭喜完成全部 26 對動物！`;
+      } else if (winners.length > 1) {
+        victoryHeadline.textContent = `🤝 平手！${winners.map(w => w.name).join(' 與 ')} 並列第一`;
+      } else {
+        victoryHeadline.textContent = `👑 ${winners[0].name} 獲勝！`;
+      }
+
+      resultList.innerHTML = '';
+      sorted.forEach((p, idx) => {
+        const item = document.createElement('div');
+        item.className = 'result-item' + (p.score === topScore ? ' winner' : '');
+        item.innerHTML = `
+          <span>${idx === 0 ? '🥇 ' : idx === 1 ? '🥈 ' : idx === 2 ? '🥉 ' : '🐾 '}${p.isAI ? '🤖 ' : ''}${p.name}</span>
+          <span style="color:${p.color}">${p.score} 對</span>
+        `;
+        resultList.appendChild(item);
+      });
+
+      resultSummary.textContent = `總回合數：${state.moves} 步 · 用時：${timeStr}`;
+      victoryModal.classList.add('open');
+    }
+
+    // Setup Modal UI
+    function setModePreset(mode) {
+      state.selectedMode = mode;
+      if (mode === 'solo') state.setupSlots = [{ isAI: false }];
+      if (mode === 'vs-ai') state.setupSlots = [{ isAI: false }, { isAI: true }];
+      if (mode === '2p') state.setupSlots = [{ isAI: false }, { isAI: false }];
+      if (mode === '3p') state.setupSlots = [{ isAI: false }, { isAI: false }, { isAI: false }];
+      if (mode === '4p') state.setupSlots = [{ isAI: false }, { isAI: false }, { isAI: false }, { isAI: false }];
+
+      modeGrid.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.mode === mode);
+      });
+      renderSetupSlots();
+    }
+
+    function renderSetupSlots() {
+      playerSlotsEl.innerHTML = '';
+      state.setupSlots.forEach((slot, idx) => {
+        const row = document.createElement('div');
+        row.className = 'slot-row';
+        const canToggle = state.setupSlots.length > 1;
+        row.innerHTML = `
+          <span class="slot-info">
+            <span class="player-badge-dot" style="background:${PLAYER_COLORS[idx]}; width:10px; height:10px;"></span>
+            <span>位置 ${idx + 1}</span>
+          </span>
+          <button class="slot-toggle" type="button" ${canToggle ? '' : 'disabled'}>
+            ${slot.isAI ? '🤖 電腦' : '🧑 玩家'}
+          </button>
+        `;
+        if (canToggle) {
+          row.querySelector('.slot-toggle').addEventListener('click', () => {
+            slot.isAI = !slot.isAI;
+            renderSetupSlots();
+          });
+        }
+        playerSlotsEl.appendChild(row);
+      });
+
+      const hasAI = state.setupSlots.some(s => s.isAI);
+      aiDifficultyWrap.style.display = hasAI ? 'block' : 'none';
+    }
+
+    modeGrid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.mode-btn');
+      if (!btn) return;
+      setModePreset(btn.dataset.mode);
+    });
+
+    aiDiffRow.addEventListener('click', (e) => {
+      const btn = e.target.closest('.mode-btn');
+      if (!btn) return;
+      state.aiDifficulty = btn.dataset.diff;
+      aiDiffRow.querySelectorAll('.mode-btn').forEach(b => {
+        b.classList.toggle('selected', b.dataset.diff === state.aiDifficulty);
+      });
+    });
+
+    setupBtn.addEventListener('click', () => {
+      renderSetupSlots();
+      setupModal.classList.add('open');
+    });
+    closeSetupBtn.addEventListener('click', () => setupModal.classList.remove('open'));
+    closeVictoryBtn.addEventListener('click', () => victoryModal.classList.remove('open'));
+    startGameBtn.addEventListener('click', startNewGame);
+    playAgainBtn.addEventListener('click', startNewGame);
+
+    [setupModal, victoryModal].forEach(modal => {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('open');
+      });
+    });
+
+    // Boot Game
+    setModePreset('vs-ai');
+    startNewGame();
+  </script>
+</body>
+</html>
